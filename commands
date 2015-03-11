@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+source "$(dirname $0)/../common/functions"
+# load common functions
+. $(dirname "$0")/functions
+
+check_required_params $1 
+init_vars
+
+case "$COMMAND" in
+  eth:logs)
+    eth_logs
+    ;;
+
+  eth:start)
+    eth_start
+    ;;
+
+  eth:stop)
+    eth_stop
+    ;;
+
+  help)
+    cat && cat | print_help
+    ;;
+
+  *)
+    exit $DOKKU_NOT_IMPLEMENTED_EXIT
+    ;;
+
+esac

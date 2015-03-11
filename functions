@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+
+COMMAND=
+ETHEREUM_OPTIONS=
+ETHEREUM_DIR=
+
+DEBUG=1
+
+ETH_JSON_RPC=1
+ETH_MINING=1
+
+DOCKER_ETHEREUM_IMAGE="ethereum/client-cpp"
+ETHEREUM_IMAGE=$(docker images | grep "$DOCKER_ETHEREUM_IMAGE" | awk '{print $3}')
+
+
+function info() {
+  local msg="$1"
+  echo "-----> $msg"
+}
+
+function failure() {
+  local msg="$1"
+  echo "FAILURE: $msg"
+  exit 1
+}
+
+function debug() {
+  local msg="$1"
+  if [ ! -z "$DEBUG" ];then
+    echo "---------> $msg"
+  fi
+}
+
+function check_required_params() {
+  debug "Check required params"
+  local command_param="$1"
+
+  COMMAND="$command_param"
+  debug "set COMMAND to $COMMAND"
+
+  # if [[ $command_param == eth:* ]]; then
+  # fi
+}
+
+function check_ethereum_dir() {
+  debug "Check ethereum dir"
+  if [ -z $ETHEREUM_DIR ]; then
+    failure "Call init_vars first (ETHEREUM_DIR not set)"
+  fi
+  if [ ! -d $ETHEREUM_DIR ]; then
+    mkdir -p $ETHEREUM_DIR
+    chown -R dokku: $ETHEREUM_DIR
+    debug "Created $ETHEREUM_DIR"
+  else
+    debug "$ETHEREUM_DIR exists"
+  fi
+}
+
+function init_vars() {
+  debug "Init vars"
+
+  ETHEREUM_DIR="$DOKKU_ROOT/.ethereum"
+  check_ethereum_dir
+
+  ETHEREUM_OPTIONS_PROPERTY="$ETHEREUM_DIR/options"
+
+  if [ -z "$ETHEREUM_OPTIONS" ]; then
+    ETHEREUM_OPTIONS='-j -b'
+  fi
+
+  echo $ETHEREUM_OPTIONS > "$ETHEREUM_OPTIONS_PROPERTY"
+}
+
+
+function check_image() {
+  debug "Check image"
+  local image="$1"
+
+  if [[ -z $image ]]; then
+    failure "Ethereum image not found... Did you run 'dokku plugins-install'?"
+  fi
+}
+
+function get_container_id() {
+  ID=$(docker ps -a | grep "$DOCKER_ETHEREUM_IMAGE":latest | awk '{print $1}')
+  echo $ID
+}
+
+function check_is_running() {
+  debug "Check is running"
+  local container="$1"
+
+  if docker ps -a | grep "$DOCKER_ETHEREUM_IMAGE":latest | grep Exited -q ; then
+    failure "Ethereum not running. Check eth:logs for details."
+  fi
+}
+
+function eth_logs() {
+  echo
+  info "Logs for ethereum"
+  ID=$(get_container_id)
+  if [[ -z $ID ]]; then
+    failure "Ethereum not running. Make sure you start it with eth:start"
+  else
+    docker logs $ID | tail -n 100
+  fi
+}
+
+
+function eth_start() {
+  # Creates a new container or starts the existing
+  echo
+  info "Starting ethereum"
+  check_image $ETHEREUM_IMAGE
+  ID=$(get_container_id)
+  if [[ -z $ID ]]; then
+    debug "Creating a new container"
+    docker run -d $DOCKER_ETHEREUM_IMAGE $ETHEREUM_OPTIONS
+  else
+    debug "Starting existing container"
+    docker start $ID
+  fi
+  sleep 1
+  check_is_running
+  info "Ethereum running"
+}
+
+
+function eth_stop() {
+  # Stops the container if running and removes it
+  echo
+  info "Stopping ethereum"
+  ID=$(get_container_id)
+  if [[ ! -z $ID ]]; then
+    docker kill $ID > /dev/null
+    sleep 1
+    docker rm $ID > /dev/null
+    sleep 1
+    info "Ethereum stopped"
+  fi
+}
+
+
+function print_help() {
+  cat << EOF
+    eth:start                     Creates a Ethereum container or starts it if any
+    eth:stop                      Stops and removes the Ethereum container if any
+    eth:logs                      Displays the last logs from Ethereum container
+EOF
+}
