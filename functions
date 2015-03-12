@@ -7,6 +7,8 @@ ETHEREUM_OPTIONS=
 ETHEREUM_DIR=
 
 DEBUG=
+ID=
+IP=
 
 DOCKER_ETHEREUM_IMAGE="ethereum/client-cpp"
 ETHEREUM_IMAGE=$(docker images | grep "$DOCKER_ETHEREUM_IMAGE" | awk '{print $3}')
@@ -36,6 +38,8 @@ function check_required_params() {
 
   COMMAND="$command_param"
   debug "set COMMAND to $COMMAND"
+  APP="$2"
+  debug "set APP to $APP"
 
   # if [[ $command_param == eth:* ]]; then
   # fi
@@ -80,10 +84,20 @@ function check_image() {
   fi
 }
 
+
 function get_container_id() {
-  ID=$(docker ps -a | grep "$DOCKER_ETHEREUM_IMAGE":latest | awk '{print $1}')
-  echo $ID
+  local id=$(docker ps -a | grep "$DOCKER_ETHEREUM_IMAGE":latest | awk '{print $1}')
+  eval "$1=$id"
 }
+
+
+function get_ip() {
+  debug "Get IP"
+  get_container_id ID
+  local ip=$(docker inspect $ID | grep IPAddress | cut -d '"' -f 4)
+  eval "$1=$ip"
+}
+
 
 function check_is_running() {
   debug "Check is running"
@@ -97,7 +111,7 @@ function check_is_running() {
 function eth_logs() {
   echo
   info "Logs for ethereum"
-  ID=$(get_container_id)
+  get_container_id ID
   if [[ -z $ID ]]; then
     failure "Ethereum not running. Make sure you start it with eth:start"
   else
@@ -111,10 +125,10 @@ function eth_start() {
   echo
   info "Starting ethereum"
   check_image $ETHEREUM_IMAGE
-  ID=$(get_container_id)
+  get_container_id ID
   if [[ -z $ID ]]; then
     debug "Creating a new container"
-    docker run -d $DOCKER_ETHEREUM_IMAGE $ETHEREUM_OPTIONS
+    ID=$(docker run -d $DOCKER_ETHEREUM_IMAGE $ETHEREUM_OPTIONS)
   else
     debug "Starting existing container"
     docker start $ID
@@ -122,14 +136,55 @@ function eth_start() {
   sleep 1
   check_is_running
   info "Ethereum running"
+
+  eth_info
 }
 
+
+function eth_info() {
+
+  get_ip IP
+
+  echo 
+  echo "      Options: $ETHEREUM_OPTIONS"
+  echo
+  echo "      Host: $IP"
+  echo "      Json rpc port: 8080"
+  echo
+
+}
+
+
+function eth_version() {
+
+  echo
+  info "Ethereum version"
+
+  docker run -i --rm=true $DOCKER_ETHEREUM_IMAGE -V
+}
+
+
+function eth_link() {
+
+  if [[ -z $APP ]]; then
+    failure "eth:link requires an app argument"
+  fi
+
+  echo 
+  info "Linking ethereum to $APP"
+
+  get_ip IP
+
+  dokku config:set $APP ETHEREUM_HOST="$IP"
+
+  info "$APP linked to Ethereum"
+}
 
 function eth_stop() {
   # Stops the container if running and removes it
   echo
   info "Stopping ethereum"
-  ID=$(get_container_id)
+  get_container_id ID
   if [[ ! -z $ID ]]; then
     docker kill $ID > /dev/null
     sleep 1
@@ -142,8 +197,11 @@ function eth_stop() {
 
 function print_help() {
   cat << EOF
-    eth:start                     Creates a Ethereum container or starts it if any
-    eth:stop                      Stops and removes the Ethereum container if any
-    eth:logs                      Displays the last logs from Ethereum container
+    eth:start                                       Creates a Ethereum container or starts it if any
+    eth:stop                                        Stops and removes the Ethereum container if any
+    eth:logs                                        Displays the last logs from Ethereum container
+    eth:version                                     Displays Ethereum version
+    eth:info                                        Displays Ethereum port, ip and options
+    eth:link <app>                                  Links <app> to Ethereum container
 EOF
 }

@@ -4,7 +4,7 @@ source "$(dirname $0)/../common/functions"
 # load common functions
 . $(dirname "$0")/functions
 
-check_required_params $1 
+check_required_params $1 $2
 init_vars
 
 case "$COMMAND" in
@@ -18,6 +18,18 @@ case "$COMMAND" in
 
   eth:stop)
     eth_stop
+    ;;
+
+  eth:info)
+    eth_info
+    ;;
+
+  eth:version)
+    eth_version
+    ;;
+
+  eth:link)
+    eth_link
     ;;
 
   help)
