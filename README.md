@@ -27,9 +27,12 @@ Commands
 --------
 ```
 $ dokku help
-    eth:logs                      Displays the last logs from Ethereum container
-    eth:start                     Creates a Ethereum container or starts it if any
-    eth:stop                      Stops and removes the Ethereum container if any
+    eth:info                                        Displays Ethereum port, ip and options
+    eth:logs                                        Displays the last logs from Ethereum container
+    eth:start                                       Creates a Ethereum container or starts it if any
+    eth:stop                                        Stops and removes the Ethereum container if any
+    eth:version                                     Displays Ethereum version
+    eth:link <app>                                  Links <app> to Ethereum container
 ```
 
 Simple usage
@@ -53,6 +56,29 @@ See the logs
 ```bash
 $ dokku eth:logs
 ```
+
+Advanced usage
+--------------
+
+Get the current ethereum version
+
+```bash
+$ dokku eth:version
+```
+
+Get info regarding ethereum host, json port and options used to invoke it
+
+```bash
+$ dokku eth:info
+```
+
+Link ethereum to an app
+
+```bash
+$ dokku eth:link <app>
+```
+
+When doing so, the environment variable `ETHEREUM_HOST` will be set for given app.
 
 TODO
 ----
