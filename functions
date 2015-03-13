@@ -11,7 +11,6 @@ ID=
 IP=
 
 DOCKER_ETHEREUM_IMAGE="ethereum/client-cpp"
-ETHEREUM_IMAGE=$(docker images | grep "$DOCKER_ETHEREUM_IMAGE" | awk '{print $3}')
 
 
 function info() {
@@ -77,7 +76,7 @@ function init_vars() {
 
 function check_image() {
   debug "Check image"
-  local image="$1"
+  local image=$(docker images | grep "$DOCKER_ETHEREUM_IMAGE" | awk '{print $3}')
 
   if [[ -z $image ]]; then
     failure "Ethereum image not found... Did you run 'dokku plugins-install'?"
@@ -124,7 +123,7 @@ function eth_start() {
   # Creates a new container or starts the existing
   echo
   info "Starting ethereum"
-  check_image $ETHEREUM_IMAGE
+  check_image 
   get_container_id ID
   if [[ -z $ID ]]; then
     debug "Creating a new container"
