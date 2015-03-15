@@ -10,7 +10,7 @@ DEBUG=
 ID=
 IP=
 
-DOCKER_ETHEREUM_IMAGE="ethereum/client-cpp"
+DOCKER_ETHEREUM_IMAGE="alfetopito/ethereum-stable"
 
 
 function info() {

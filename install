@@ -2,4 +2,4 @@
 set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
 
 # Go get a coffee, it might take awhile
-docker pull ethereum/client-cpp
+docker pull alfetopito/ethereum-stable
